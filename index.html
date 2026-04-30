@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>暗黑多媒体 | Dark Multimedia</title>
+
+<style>
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC";
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: -2;
+}
+/* 关键修复：将 object-fit: cover 改为 contain，以保持原始比例 */
+#stage img,
+#stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 彩虹音浪特效 - 改为透明背景 */
+#visualizer {
+  position: fixed;
+  bottom: 120px;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 1;
+  pointer-events: none;
+  background: transparent; /* 确保背景透明 */
+}
+
+.panel {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(14px);
+  border-radius: 20px;
+  padding: 14px;
+  color: #fff;
+  transition: .3s;
+  z-index: 100;
+}
+
+.hidden { display: none !important; }
+
+input[type="file"] { display: none; }
+
+.uploads {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.uploads label {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 30px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.controls {
+  text-align: center;
+  margin: 6px 0;
+}
+.controls button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 26px;
+  margin: 0 10px;
+}
+
+/* 可拖动的进度条 */
+.progress {
+  height: 4px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  margin: 10px 0;
+  cursor: pointer;
+  position: relative;
+}
+.progress:hover {
+  height: 6px;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #fff;
+  border-radius: 2px;
+  position: relative;
+}
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.progress:hover .progress-bar::after {
+  opacity: 1;
+}
+
+/* 时间显示 */
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 5px;
+  opacity: 0.8;
+}
+
+/* 播放模式控制 */
+.playback-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.mode-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mode-btn.active {
+  background: rgba(76, 175, 80, 0.7);
+}
+
+/* 频谱样式控制 */
+.spectrum-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.spectrum-select {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.spectrum-toggle {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.spectrum-toggle.active {
+  background: rgba(255, 193, 7, 0.7);
+}
+
+/* 轮播控制 */
+.slideshow-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.slideshow-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.slideshow-btn.active {
+  background: rgba(255, 193, 7, 0.7);
+}
+.speed-select {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 媒体库样式 */
+.library-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: 10px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px;
+  text-align: center;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 14px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  color: #fff;
+  border-bottom: 2px solid #fff;
+}
+
+.media-library {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.media-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+.media-item.active {
+  background: rgba(255,255,255,0.25);
+  border-left: 3px solid #4CAF50;
+}
+.media-info {
+  flex: 1;
+  overflow: hidden;
+}
+.media-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-type {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.media-actions {
+  display: flex;
+  gap: 8px;
+}
+.media-actions button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+}
+.delete-btn { color: #ff6b6b; }
+.play-btn { color: #4CAF50; }
+
+/* 录音功能 */
+.recorder-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+.recorder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 10px 0;
+}
+.record-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #ff4757;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+.record-btn.recording {
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+}
+.recording-list {
+  margin-top: 10px;
+}
+
+/* 视频控制 */
+.video-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.mute-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mute-btn.muted {
+  background: rgba(255, 71, 87, 0.5);
+}
+
+.toggle-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  text-align: center;
+  line-height: 36px;
+  z-index: 101;
+  cursor: pointer;
+}
+
+/* 当前播放指示器 */
+.now-playing {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 5px;
+  opacity: 0.8;
+}
+
+/* 加载指示器 */
+.loading-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 20px 30px;
+  border-radius: 10px;
+  z-index: 1000;
+  display: none;
+}
+.loading-spinner {
+  border: 4px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top: 4px solid #fff;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 网易云风格黑胶唱片 - 无唱针版本 */
+.vinyl-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  display: none;
+  width: 280px;
+  height: 280px;
+}
+
+.vinyl-disc {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: 
+    /* 外圈黑色 */
+    radial-gradient(circle at 50% 50%, 
+      #0a0a0a 0%, 
+      #1a1a1a 15%,
+      #0d0d0d 30%,
+      #1a1a1a 45%,
+      #0a0a0a 60%,
+      #1a1a1a 75%,
+      #0d0d0d 90%,
+      #000 100%
+    );
+  box-shadow: 
+    0 0 0 1px rgba(255,255,255,0.05),
+    0 0 20px rgba(0,0,0,0.8),
+    inset 0 0 30px rgba(0,0,0,0.9);
+  animation: spin 20s linear infinite;
+}
+
+/* 唱片纹路 */
+.vinyl-disc::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: 
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      transparent 0px,
+      transparent 1px,
+      rgba(255,255,255,0.03) 1px,
+      rgba(255,255,255,0.03) 2px
+    ),
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      transparent 0px,
+      transparent 3px,
+      rgba(255,255,255,0.02) 3px,
+      rgba(255,255,255,0.02) 4px
+    );
+}
+
+/* 中心标签区域 */
+.vinyl-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+  box-shadow: 
+    0 2px 10px rgba(0,0,0,0.3),
+    inset 0 1px 3px rgba(255,255,255,0.8);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.vinyl-label img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 中心孔 */
+.vinyl-hole {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 
+    inset 0 0 5px rgba(255,255,255,0.5),
+    0 0 0 2px rgba(255,255,255,0.1);
+  z-index: 3;
+}
+
+/* 暂停时唱片停止旋转 */
+.vinyl-container.paused .vinyl-disc {
+  animation-play-state: paused;
+}
+
+/* 黑胶控制区域 - 现在在面板内 */
+.vinyl-control-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.vinyl-toggle {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.vinyl-toggle.active {
+  background: rgba(76, 175, 80, 0.7);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 摄像头相关样式 */
+.camera-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.camera-preview {
+  width: 90%;
+  max-width: 500px;
+  height: 60vh;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.camera-controls {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.camera-btn {
+  padding: 12px 24px;
+  border-radius: 30px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: white;
+}
+
+.capture-btn {
+  background: #ff4757;
+}
+
+.close-camera-btn {
+  background: rgba(255,255,255,0.2);
+}
+
+/* 录制视频样式 */
+.video-recorder-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-preview {
+  width: 90%;
+  max-width: 500px;
+  height: 60vh;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.recording-indicator {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: none;
+}
+
+.recording-time {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 18px;
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="stage"></div>
+
+<!-- 彩虹音浪特效 - 已修复为透明背景 -->
+<canvas id="visualizer"></canvas>
+
+<!-- 加载指示器 -->
+<div class="loading-indicator" id="loadingIndicator">
+  <div class="loading-spinner"></div>
+  <div>加载中...</div>
+</div>
+
+<!-- 网易云风格黑胶唱片 - 无唱针版本 -->
+<div class="vinyl-container" id="vinylContainer">
+  <div class="vinyl-disc" id="vinylDisc">
+    <div class="vinyl-label">
+      <img id="vinylImage" src="" alt="">
+    </div>
+    <div class="vinyl-hole"></div>
+  </div>
+</div>
+
+<!-- 摄像头模态框 -->
+<div class="camera-modal" id="cameraModal">
+  <video class="camera-preview" id="cameraPreview" autoplay playsinline></video>
+  <div class="camera-controls">
+    <button class="camera-btn capture-btn" onclick="capturePhoto()">拍照</button>
+    <button class="camera-btn close-camera-btn" onclick="closeCamera()">关闭</button>
+  </div>
+</div>
+
+<!-- 视频录制模态框 -->
+<div class="video-recorder-modal" id="videoRecorderModal">
+  <div class="recording-indicator" id="recordingIndicator">● 录制中</div>
+  <div class="recording-time" id="recordingTime">00:00</div>
+  <video class="video-preview" id="videoPreview" autoplay playsinline></video>
+  <div class="camera-controls">
+    <button class="camera-btn capture-btn" id="startRecordingBtn" onclick="startVideoRecording()">开始录制</button>
+    <button class="camera-btn capture-btn" id="stopRecordingBtn" onclick="stopVideoRecording()" style="display:none;">停止录制</button>
+    <button class="camera-btn close-camera-btn" onclick="closeVideoRecorder()">关闭</button>
+  </div>
+</div>
+
+<div class="toggle-btn" onclick="togglePanel()">☰</div>
+
+<div class="panel" id="panel">
+  <!-- 上传按钮 -->
+  <div class="uploads">
+    <label>图片<input type="file" accept="image/*" multiple onchange="addImages(event)"></label>
+    <label>音乐<input type="file" accept="audio/*" multiple onchange="addMusic(event)"></label>
+    <label>视频<input type="file" accept="video/*" multiple onchange="addVideos(event)"></label>
+  </div>
+
+  <!-- 新增：摄像头功能按钮 -->
+  <div class="uploads">
+    <label>自拍<input type="button" onclick="openCamera()" value="打开相机"></label>
+    <label>录像<input type="button" onclick="openVideoRecorder()" value="录制视频"></label>
+  </div>
+
+  <!-- 播放模式控制 -->
+  <div class="playback-controls">
+    <button class="mode-btn active" id="modeSequential" onclick="setPlayMode('sequential')">顺序</button>
+    <button class="mode-btn" id="modeLoop" onclick="setPlayMode('loop')">单曲</button>
+    <button class="mode-btn" id="modeRandom" onclick="setPlayMode('random')">随机</button>
+  </div>
+
+  <!-- 频谱样式控制 -->
+  <div class="spectrum-controls">
+    <select class="spectrum-select" id="spectrumStyle" onchange="changeSpectrumStyle()">
+      <option value="rainbow">彩虹频谱</option>
+      <option value="bars">条形频谱</option>
+      <option value="circular">圆形频谱</option>
+      <option value="waveform">波形频谱</option>
+      <option value="dots">点状频谱</option>
+      <option value="gradient">渐变频谱</option>
+    </select>
+    <button class="spectrum-toggle active" id="spectrumToggle" onclick="toggleSpectrumVisibility()">隐藏频谱</button>
+  </div>
+
+  <!-- 黑胶控制区域 - 现在在面板内 -->
+  <div class="vinyl-control-panel">
+    <button class="vinyl-toggle" id="vinylToggle" onclick="toggleVinyl()">开启黑胶</button>
+    <label class="vinyl-toggle">
+      自定义图片<input type="file" accept="image/*" onchange="setVinylImage(event)">
+    </label>
+  </div>
+
+  <!-- 图片轮播控制 -->
+  <div class="slideshow-controls" id="slideshowControls" style="display:none;">
+    <button class="slideshow-btn" id="slideshowBtn" onclick="toggleSlideshow()">开始轮播</button>
+    <select class="speed-select" id="slideshowSpeed" onchange="changeSlideshowSpeed()">
+      <option value="3000">慢速 (3秒)</option>
+      <option value="2000" selected>中速 (2秒)</option>
+      <option value="1000">快速 (1秒)</option>
+      <option value="500">极快 (0.5秒)</option>
+    </select>
+  </div>
+
+  <!-- 主控制区 -->
+  <div class="controls">
+    <button onclick="prevMedia()">◀</button>
+    <button onclick="togglePlay()" id="playBtn">▶</button>
+    <button onclick="nextMedia()">▶▶</button>
+  </div>
+
+  <div class="progress" id="progressBar" onclick="seekMedia(event)">
+    <div class="progress-bar" id="bar"></div>
+  </div>
+  
+  <!-- 时间显示 -->
+  <div class="time-display">
+    <span id="currentTime">0:00</span>
+    <span id="totalTime">0:00</span>
+  </div>
+  
+  <div class="now-playing" id="nowPlaying">未选择媒体</div>
+
+  <!-- 视频静音控制 -->
+  <div class="video-controls" id="videoControls" style="display:none;">
+    <button class="mute-btn" id="muteBtn" onclick="toggleMute()">开启声音</button>
+  </div>
+
+  <!-- 媒体库标签 -->
+  <div class="library-tabs">
+    <button class="tab-btn active" onclick="switchTab('images')">图片库</button>
+    <button class="tab-btn" onclick="switchTab('music')">音乐库</button>
+    <button class="tab-btn" onclick="switchTab('videos')">视频库</button>
+    <button class="tab-btn" onclick="switchTab('recordings')">录音库</button>
+  </div>
+
+  <!-- 媒体库内容 -->
+  <div class="media-library" id="mediaLibrary">
+    <!-- 动态填充 -->
+  </div>
+
+  <!-- 录音功能 -->
+  <div class="recorder-section">
+    <div style="text-align:center; font-size:14px;">录音机</div>
+    <div class="recorder-controls">
+      <button class="record-btn" id="recordBtn" onclick="toggleRecording()">●</button>
+    </div>
+    <div class="recording-list" id="recordingList"></div>
+  </div>
+</div>
+
+<audio id="audio"></audio>
+<video id="video" muted playsinline></video>
+<audio id="recorderAudio"></audio>
+
+<script>
+const stage = document.getElementById('stage');
+const audio = document.getElementById('audio');
+const video = document.getElementById('video');
+const recorderAudio = document.getElementById('recorderAudio');
+const panel = document.getElementById('panel');
+const mediaLibrary = document.getElementById('mediaLibrary');
+const nowPlaying = document.getElementById('nowPlaying');
+const videoControls = document.getElementById('videoControls');
+const muteBtn = document.getElementById('muteBtn');
+const recordBtn = document.getElementById('recordBtn');
+const vinylContainer = document.getElementById('vinylContainer');
+const vinylDisc = document.getElementById('vinylDisc');
+const vinylImage = document.getElementById('vinylImage');
+const vinylToggle = document.getElementById('vinylToggle');
+const slideshowControls = document.getElementById('slideshowControls');
+const slideshowBtn = document.getElementById('slideshowBtn');
+const slideshowSpeed = document.getElementById('slideshowSpeed');
+const currentTimeEl = document.getElementById('currentTime');
+const totalTimeEl = document.getElementById('totalTime');
+const progressBar = document.getElementById('progressBar');
+const loadingIndicator = document.getElementById('loadingIndicator');
+const spectrumToggle = document.getElementById('spectrumToggle');
+const cameraModal = document.getElementById('cameraModal');
+const cameraPreview = document.getElementById('cameraPreview');
+const videoRecorderModal = document.getElementById('videoRecorderModal');
+const videoPreview = document.getElementById('videoPreview');
+const recordingIndicator = document.getElementById('recordingIndicator');
+const recordingTime = document.getElementById('recordingTime');
+const startRecordingBtn = document.getElementById('startRecordingBtn');
+const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+
+// 数据存储
+let images = [];
+let videos = [];
+let music = [];
+let recordings = [];
+let currentIndex = 0;
+let currentType = 'image'; // image, video, music, recording
+let isMuted = true;
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+let playMode = 'sequential'; // sequential, loop, random
+let showVinyl = false;
+let vinylCustomImage = null;
+let spectrumVisible = true; // 频谱是否可见
+
+// 摄像头相关
+let cameraStream = null;
+let videoRecorder = null;
+let videoRecordingChunks = [];
+let videoRecordingStartTime = 0;
+let videoRecordingTimer = null;
+
+// 图片轮播相关
+let slideshowInterval = null;
+let isSlideshowActive = false;
+let slideshowDelay = 2000; // 默认2秒
+
+// 频谱样式
+let currentSpectrumStyle = 'rainbow';
+
+// 音频可视化
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
+let audioContext;
+let analyser;
+let dataArray;
+let bufferLength;
+
+// 初始化
+initVisualizer();
+loadFromLocalStorage(); // 从本地存储加载数据
+renderLibrary();
+
+/* 音频可视化初始化 */
+function initVisualizer() {
+  canvas.width = window.innerWidth;
+  canvas.height = 80;
+  
+  // 创建音频分析器
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 256;
+  bufferLength = analyser.frequencyBinCount;
+  dataArray = new Uint8Array(bufferLength);
+  
+  // 连接音频节点
+  const source = audioContext.createMediaElementSource(audio);
+  source.connect(analyser);
+  analyser.connect(audioContext.destination);
+  
+  // 开始绘制
+  drawVisualizer();
+}
+
+/* 切换频谱样式 */
+function changeSpectrumStyle() {
+  currentSpectrumStyle = document.getElementById('spectrumStyle').value;
+}
+
+/* 切换频谱可见性 */
+function toggleSpectrumVisibility() {
+  spectrumVisible = !spectrumVisible;
+  spectrumToggle.textContent = spectrumVisible ? '隐藏频谱' : '显示频谱';
+  spectrumToggle.classList.toggle('active', spectrumVisible);
+  
+  // 立即更新画布
+  if (!spectrumVisible) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+/* 绘制频谱 - 主函数 */
+function drawVisualizer() {
+  requestAnimationFrame(drawVisualizer);
+  
+  // 如果频谱不可见，直接清空并返回
+  if (!spectrumVisible || (currentType !== 'music' && currentType !== 'recording')) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  
+  analyser.getByteFrequencyData(dataArray);
+  
+  // 清空画布（透明背景）
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 根据选择的样式绘制
+  switch(currentSpectrumStyle) {
+    case 'rainbow':
+      drawRainbowSpectrum();
+      break;
+    case 'bars':
+      drawBarsSpectrum();
+      break;
+    case 'circular':
+      drawCircularSpectrum();
+      break;
+    case 'waveform':
+      drawWaveformSpectrum();
+      break;
+    case 'dots':
+      drawDotsSpectrum();
+      break;
+    case 'gradient':
+      drawGradientSpectrum();
+      break;
+  }
+}
+
+/* 1. 彩虹频谱 */
+function drawRainbowSpectrum() {
+  const barWidth = (canvas.width / bufferLength) * 2.5;
+  let barHeight;
+  let x = 0;
+  
+  for(let i = 0; i < bufferLength; i++) {
+    barHeight = dataArray[i] / 2;
+    
+    // 彩虹渐变
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    gradient.addColorStop(0, 'rgb(255, 0, 0)');
+    gradient.addColorStop(0.17, 'rgb(255, 165, 0)');
+    gradient.addColorStop(0.33, 'rgb(255, 255, 0)');
+    gradient.addColorStop(0.5, 'rgb(0, 255, 0)');
+    gradient.addColorStop(0.67, 'rgb(0, 127, 255)');
+    gradient.addColorStop(0.83, 'rgb(0, 0, 255)');
+    gradient.addColorStop(1, 'rgb(139, 0, 255)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+    
+    x += barWidth + 1;
+  }
+}
+
+/* 2. 条形频谱 */
+function drawBarsSpectrum() {
+  const barWidth = (canvas.width / bufferLength) * 2;
+  let barHeight;
+  let x = 0;
+  
+  for(let i = 0; i < bufferLength; i++) {
+    barHeight = dataArray[i] / 2;
+    
+    // 单色条形
+    ctx.fillStyle = `rgb(${Math.min(255, dataArray[i])}, 100, 255)`;
+    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+    
+    x += barWidth + 1;
+  }
+}
+
+/* 3. 圆形频谱 */
+function drawCircularSpectrum() {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const radius = 30;
+  
+  ctx.translate(centerX, centerY);
+  
+  for(let i = 0; i < bufferLength; i++) {
+    const angle = (i * 2 * Math.PI) / bufferLength;
+    const barHeight = dataArray[i] / 2;
+    
+    const x1 = radius * Math.cos(angle);
+    const y1 = radius * Math.sin(angle);
+    const x2 = (radius + barHeight) * Math.cos(angle);
+    const y2 = (radius + barHeight) * Math.sin(angle);
+    
+    // 根据频率设置颜色
+    const hue = (i * 360) / bufferLength;
+    ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
+    ctx.lineWidth = 2;
+    
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+  
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置变换
+}
+
+/* 4. 波形频谱 */
+function drawWaveformSpectrum() {
+  ctx.beginPath();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgb(0, 200, 255)';
+  
+  const sliceWidth = canvas.width / bufferLength;
+  let x = 0;
+  
+  for(let i = 0; i < bufferLength; i++) {
+    const v = dataArray[i] / 128.0;
+    const y = v * canvas.height / 2;
+    
+    if(i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+    
+    x += sliceWidth;
+  }
+  
+  ctx.lineTo(canvas.width, canvas.height / 2);
+  ctx.stroke();
+}
+
+/* 5. 点状频谱 */
+function drawDotsSpectrum() {
+  const dotRadius = 2;
+  const spacing = canvas.width / bufferLength;
+  
+  for(let i = 0; i < bufferLength; i++) {
+    const x = i * spacing;
+    const y = canvas.height - dataArray[i] / 2;
+    
+    // 根据频率设置颜色和大小
+    const size = dotRadius + dataArray[i] / 50;
+    const hue = (i * 360) / bufferLength;
+    
+    ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/* 6. 渐变频谱 */
+function drawGradientSpectrum() {
+  const barWidth = (canvas.width / bufferLength) * 2.5;
+  let barHeight;
+  let x = 0;
+  
+  for(let i = 0; i < bufferLength; i++) {
+    barHeight = dataArray[i] / 2;
+    
+    // 垂直渐变
+    const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
+    gradient.addColorStop(0, 'rgba(0, 255, 255, 0.8)');
+    gradient.addColorStop(0.5, 'rgba(255, 0, 255, 0.8)');
+    gradient.addColorStop(1, 'rgba(255, 255, 0, 0.8)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+    
+    x += barWidth + 1;
+  }
+}
+
+/* 播放模式控制 */
+function setPlayMode(mode) {
+  playMode = mode;
+  
+  // 更新按钮状态
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`mode${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('active');
+}
+
+/* 黑胶唱片控制 */
+function toggleVinyl() {
+  showVinyl = !showVinyl;
+  vinylContainer.style.display = showVinyl ? 'block' : 'none';
+  vinylToggle.textContent = showVinyl ? '关闭黑胶' : '开启黑胶';
+  vinylToggle.classList.toggle('active', showVinyl);
+  
+  // 更新暂停状态
+  updateVinylPauseState();
+}
+
+function setVinylImage(e) {
+  const file = e.target.files[0];
+  if (file) {
+    vinylCustomImage = URL.createObjectURL(file);
+    vinylImage.src = vinylCustomImage;
+  }
+}
+
+/* 更新黑胶暂停状态 */
+function updateVinylPauseState() {
+  if ((currentType === 'music' || currentType === 'recording') && showVinyl) {
+    const isPaused = (currentType === 'music' && audio.paused) || 
+                     (currentType === 'recording' && recorderAudio.paused);
+    vinylContainer.classList.toggle('paused', isPaused);
+  }
+}
+
+/* 图片轮播控制 */
+function toggleSlideshow() {
+  if (currentType !== 'image') return;
+  
+  isSlideshowActive = !isSlideshowActive;
+  slideshowBtn.textContent = isSlideshowActive ? '暂停轮播' : '开始轮播';
+  slideshowBtn.classList.toggle('active', isSlideshowActive);
+  
+  if (isSlideshowActive) {
+    startSlideshow();
+  } else {
+    stopSlideshow();
+  }
+}
+
+function startSlideshow() {
+  if (images.length <= 1) return;
+  
+  stopSlideshow(); // 先停止现有的轮播
+  slideshowInterval = setInterval(() => {
+    nextMedia();
+  }, slideshowDelay);
+}
+
+function stopSlideshow() {
+  if (slideshowInterval) {
+    clearInterval(slideshowInterval);
+    slideshowInterval = null;
+  }
+}
+
+function changeSlideshowSpeed() {
+  slideshowDelay = parseInt(slideshowSpeed.value);
+  
+  if (isSlideshowActive) {
+    stopSlideshow();
+    startSlideshow();
+  }
+}
+
+/* 上传功能 - 修复音频过长无法加载的问题 */
+function addImages(e) {
+  const files = Array.from(e.target.files);
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      images.push({
+        id: Date.now() + i,
+        name: file.name,
+        dataUrl: event.target.result,
+        type: 'image'
+      });
+      saveToLocalStorage();
+      renderLibrary();
+      if (images.length > 0 && currentType === 'image') {
+        switchToMedia('image', images.length - 1);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function addVideos(e) {
+  const files = Array.from(e.target.files);
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      videos.push({
+        id: Date.now() + i,
+        name: file.name,
+        dataUrl: event.target.result,
+        type: 'video'
+      });
+      saveToLocalStorage();
+      renderLibrary();
+      if (videos.length > 0 && currentType === 'video') {
+        switchToMedia('video', videos.length - 1);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function addMusic(e) {
+  const files = Array.from(e.target.files);
+  
+  // 显示加载指示器
+  loadingIndicator.style.display = 'block';
+  
+  let processedCount = 0;
+  
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    
+    reader.onload = function(event) {
+      music.push({
+        id: Date.now() + i,
+        name: file.name,
+        dataUrl: event.target.result,
+        type: 'music'
+      });
+      
+      processedCount++;
+      
+      if (processedCount === files.length) {
+        loadingIndicator.style.display = 'none';
+        saveToLocalStorage();
+        renderLibrary();
+        
+        if (music.length > 0 && currentType === 'music') {
+          switchToMedia('music', music.length - 1);
+        }
+      }
+    };
+    
+    reader.onerror = function() {
+      console.error('读取文件失败:', file.name);
+      processedCount++;
+      
+      if (processedCount === files.length) {
+        loadingIndicator.style.display = 'none';
+        saveToLocalStorage();
+        renderLibrary();
+      }
+    };
+    
+    reader.readAsDataURL(file);
+  });
+}
+
+/* 渲染媒体库 */
+function renderLibrary() {
+  const activeTab = document.querySelector('.tab-btn.active').textContent;
+  let items = [];
+  
+  if (activeTab.includes('图片')) items = images;
+  else if (activeTab.includes('音乐')) items = music;
+  else if (activeTab.includes('视频')) items = videos;
+  else if (activeTab.includes('录音')) items = recordings;
+  
+  mediaLibrary.innerHTML = items.map((item, index) => `
+    <div class="media-item ${currentType === item.type && currentIndex === index ? 'active' : ''}" 
+         onclick="switchToMedia('${item.type}', ${index})">
+      <div class="media-info">
+        <div class="media-name">${item.name}</div>
+        <div class="media-type">${getTypeLabel(item.type)}</div>
+      </div>
+      <div class="media-actions">
+        <button class="play-btn" onclick="event.stopPropagation(); switchToMedia('${item.type}', ${index})">▶</button>
+        <button class="delete-btn" onclick="event.stopPropagation(); deleteMedia('${item.type}', ${index})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getTypeLabel(type) {
+  switch(type) {
+    case 'image': return '图片';
+    case 'video': return '视频';
+    case 'music': return '音乐';
+    case 'recording': return '录音';
+    default: return '';
+  }
+}
+
+/* 切换媒体 - 修复播放视频时音乐和录音不会被暂停的问题 */
+function switchToMedia(type, index) {
+  currentType = type;
+  currentIndex = index;
+  
+  // 修复：当切换到图片或视频时，不暂停音乐和录音
+  if (type === 'image') {
+    // 只暂停视频和录音，不暂停音乐
+    video.pause();
+    recorderAudio.pause();
+  } else if (type === 'video') {
+    // 修复：播放视频时，不暂停音乐和录音
+    // 只暂停录音，不暂停音乐
+    recorderAudio.pause();
+    // 视频会自动播放，不需要暂停其他
+  } else {
+    // 切换到音乐或录音时，暂停所有其他媒体
+    audio.pause();
+    video.pause();
+    recorderAudio.pause();
+  }
+  
+  // 隐藏所有控制
+  videoControls.style.display = 'none';
+  slideshowControls.style.display = 'none';
+  
+  // 控制黑胶唱片显示
+  if ((type === 'music' || type === 'recording') && showVinyl) {
+    vinylContainer.style.display = 'block';
+  } else {
+    vinylContainer.style.display = 'none';
+  }
+  
+  // 更新黑胶暂停状态
+  updateVinylPauseState();
+  
+  // 显示图片轮播控制
+  if (type === 'image' && images.length > 1) {
+    slideshowControls.style.display = 'flex';
+  }
+  
+  let mediaItem;
+  
+  switch(type) {
+    case 'image':
+      mediaItem = images[index];
+      stage.innerHTML = `<img src="${mediaItem.dataUrl}" alt="${mediaItem.name}">`;
+      nowPlaying.textContent = `图片: ${mediaItem.name}`;
+      updateTimeDisplay(0, 0);
+      
+      // 如果轮播激活，重新开始轮播
+      if (isSlideshowActive) {
+        startSlideshow();
+      }
+      break;
+      
+    case 'video':
+      mediaItem = videos[index];
+      video.src = mediaItem.dataUrl;
+      stage.innerHTML = '';
+      stage.appendChild(video);
+      video.play();
+      videoControls.style.display = 'flex';
+      updateMuteButton();
+      nowPlaying.textContent = `视频: ${mediaItem.name}`;
+      updateTimeDisplay(video.currentTime, video.duration);
+      break;
+      
+    case 'music':
+      mediaItem = music[index];
+      
+      // 显示加载指示器
+      loadingIndicator.style.display = 'block';
+      
+      audio.src = mediaItem.dataUrl;
+      
+      // 等待音频可以播放
+      audio.oncanplaythrough = () => {
+        loadingIndicator.style.display = 'none';
+        audio.play();
+        playBtn.textContent = '⏸';
+        nowPlaying.textContent = `音乐: ${mediaItem.name}`;
+        updateTimeDisplay(audio.currentTime, audio.duration);
+      };
+      
+      audio.onerror = () => {
+        loadingIndicator.style.display = 'none';
+        alert('音频加载失败，请尝试其他文件');
+      };
+      
+      // 设置超时，避免长时间等待
+      setTimeout(() => {
+        if (loadingIndicator.style.display === 'block') {
+          loadingIndicator.style.display = 'none';
+          alert('音频加载超时，请检查文件大小或格式');
+        }
+      }, 10000); // 10秒超时
+      break;
+      
+    case 'recording':
+      mediaItem = recordings[index];
+      recorderAudio.src = mediaItem.dataUrl;
+      recorderAudio.play();
+      nowPlaying.textContent = `录音: ${mediaItem.name}`;
+      updateTimeDisplay(recorderAudio.currentTime, recorderAudio.duration);
+      break;
+  }
+  
+  renderLibrary();
+}
+
+/* 进度条拖动功能 */
+function seekMedia(event) {
+  const rect = progressBar.getBoundingClientRect();
+  const percent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  
+  let duration;
+  if (currentType === 'music') {
+    duration = audio.duration;
+    audio.currentTime = percent * duration;
+  } else if (currentType === 'video') {
+    duration = video.duration;
+    video.currentTime = percent * duration;
+  } else if (currentType === 'recording') {
+    duration = recorderAudio.duration;
+    recorderAudio.currentTime = percent * duration;
+  }
+  
+  // 更新进度条显示
+  document.getElementById('bar').style.width = (percent * 100) + '%';
+}
+
+/* 更新时间显示 */
+function updateTimeDisplay(current, total) {
+  const formatTime = (seconds) => {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  currentTimeEl.textContent = formatTime(current);
+  totalTimeEl.textContent = formatTime(total);
+}
+
+/* 删除媒体 */
+function deleteMedia(type, index) {
+  switch(type) {
+    case 'image': images.splice(index, 1); break;
+    case 'video': videos.splice(index, 1); break;
+    case 'music': music.splice(index, 1); break;
+    case 'recording': 
+      URL.revokeObjectURL(recordings[index].url);
+      recordings.splice(index, 1); 
+      break;
+  }
+  
+  // 如果删除了当前正在播放的媒体，切换到第一个
+  if (currentIndex >= eval(type + 's').length) {
+    currentIndex = Math.max(0, eval(type + 's').length - 1);
+    if (eval(type + 's').length > 0) {
+      switchToMedia(type, currentIndex);
+    } else {
+      stage.innerHTML = '';
+      nowPlaying.textContent = '未选择媒体';
+      vinylContainer.style.display = 'none';
+      slideshowControls.style.display = 'none';
+      updateTimeDisplay(0, 0);
+    }
+  }
+  
+  saveToLocalStorage();
+  renderLibrary();
+}
+
+/* 切换标签 */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  renderLibrary();
+}
+
+/* 播放控制 - 修复视频暂停问题 */
+function togglePlay() {
+  if (currentType === 'music') {
+    if (audio.paused) {
+      audio.play();
+      playBtn.textContent = '⏸';
+    } else {
+      audio.pause();
+      playBtn.textContent = '▶';
+    }
+  } else if (currentType === 'recording') {
+    if (recorderAudio.paused) {
+      recorderAudio.play();
+      playBtn.textContent = '⏸';
+    } else {
+      recorderAudio.pause();
+      playBtn.textContent = '▶';
+    }
+  } else if (currentType === 'video') {
+    // 修复视频暂停功能
+    if (video.paused) {
+      video.play();
+      playBtn.textContent = '⏸';
+    } else {
+      video.pause();
+      playBtn.textContent = '▶';
+    }
+  }
+  
+  // 更新黑胶暂停状态
+  updateVinylPauseState();
+}
+
+function prevMedia() {
+  let items;
+  switch(currentType) {
+    case 'image': items = images; break;
+    case 'video': items = videos; break;
+    case 'music': items = music; break;
+    case 'recording': items = recordings; break;
+  }
+  
+  if (items.length === 0) return;
+  
+  if (playMode === 'random') {
+    currentIndex = Math.floor(Math.random() * items.length);
+  } else {
+    currentIndex = (currentIndex - 1 + items.length) % items.length;
+  }
+  
+  switchToMedia(currentType, currentIndex);
+}
+
+function nextMedia() {
+  let items;
+  switch(currentType) {
+    case 'image': items = images; break;
+    case 'video': items = videos; break;
+    case 'music': items = music; break;
+    case 'recording': items = recordings; break;
+  }
+  
+  if (items.length === 0) return;
+  
+  if (playMode === 'random') {
+    currentIndex = Math.floor(Math.random() * items.length);
+  } else if (playMode === 'loop') {
+    // 单曲循环，不切换
+    if (currentType === 'music') {
+      audio.currentTime = 0;
+      audio.play();
+    } else if (currentType === 'recording') {
+      recorderAudio.currentTime = 0;
+      recorderAudio.play();
+    } else if (currentType === 'video') {
+      video.currentTime = 0;
+      video.play();
+    }
+    return;
+  } else {
+    currentIndex = (currentIndex + 1) % items.length;
+  }
+  
+  switchToMedia(currentType, currentIndex);
+}
+
+/* 视频静音控制 */
+function toggleMute() {
+  isMuted = !isMuted;
+  video.muted = isMuted;
+  updateMuteButton();
+}
+
+function updateMuteButton() {
+  muteBtn.textContent = isMuted ? '开启声音' : '关闭声音';
+  muteBtn.classList.toggle('muted', isMuted);
+}
+
+/* 录音功能 - 修复手机录音问题 */
+function toggleRecording() {
+  if (!isRecording) {
+    startRecording();
+  } else {
+    stopRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const constraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 44100,
+      }
+    };
+    
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    audioChunks = [];
+    
+    mediaRecorder.ondataavailable = event => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
+    };
+    
+    mediaRecorder.onstop = () => {
+      if (audioChunks.length === 0) {
+        alert('录音失败：未获取到音频数据');
+        return;
+      }
+      const audioBlob = new Blob(audioChunks, { type: mimeType });
+      const extension = mimeType.includes('webm') ? 'webm' : 'mp4';
+      const name = `录音_${new Date().toLocaleTimeString('zh-CN', {hour12: false}).replace(/:/g, '-')}.${extension}`;
+      
+      const reader = new FileReader();
+      reader.onload = function() {
+        recordings.push({
+          id: Date.now(),
+          name: name,
+          dataUrl: reader.result,
+          type: 'recording'
+        });
+        saveToLocalStorage();
+        renderLibrary();
+        if (currentType === 'recording' && recordings.length === 1) {
+          switchToMedia('recording', 0);
+        }
+      };
+      reader.readAsDataURL(audioBlob);
+    };
+    
+    mediaRecorder.start(100);
+    isRecording = true;
+    recordBtn.classList.add('recording');
+    recordBtn.textContent = '■';
+  } catch (err) {
+    alert('无法访问麦克风：' + err.message);
+    console.error('录音错误:', err);
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    isRecording = false;
+    recordBtn.classList.remove('recording');
+    recordBtn.textContent = '●';
+  }
+}
+
+/* 摄像头功能 */
+async function openCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: "user" } 
+    });
+    cameraPreview.srcObject = cameraStream;
+    cameraModal.style.display = 'flex';
+  } catch (err) {
+    alert('无法访问摄像头：' + err.message);
+    console.error('摄像头错误:', err);
+  }
+}
+
+function capturePhoto() {
+  const canvas = document.createElement('canvas');
+  canvas.width = cameraPreview.videoWidth;
+  canvas.height = cameraPreview.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+  
+  const dataUrl = canvas.toDataURL('image/jpeg');
+  const name = `自拍_${new Date().toLocaleTimeString('zh-CN', {hour12: false}).replace(/:/g, '-')}.jpg`;
+  
+  images.push({
+    id: Date.now(),
+    name: name,
+    dataUrl: dataUrl,
+    type: 'image'
+  });
+  
+  saveToLocalStorage();
+  renderLibrary();
+  closeCamera();
+  
+  // 切换到新拍摄的照片
+  switchToMedia('image', images.length - 1);
+}
+
+function closeCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  cameraModal.style.display = 'none';
+}
+
+/* 视频录制功能 */
+async function openVideoRecorder() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: "user" },
+      audio: true
+    });
+    videoPreview.srcObject = cameraStream;
+    videoRecorderModal.style.display = 'flex';
+  } catch (err) {
+    alert('无法访问摄像头：' + err.message);
+    console.error('摄像头错误:', err);
+  }
+}
+
+function startVideoRecording() {
+  videoRecordingChunks = [];
+  videoRecordingStartTime = Date.now();
+  
+  const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+  videoRecorder = new MediaRecorder(cameraStream, { mimeType });
+  
+  videoRecorder.ondataavailable = event => {
+    if (event.data.size > 0) {
+      videoRecordingChunks.push(event.data);
+    }
+  };
+  
+  videoRecorder.onstop = () => {
+    const videoBlob = new Blob(videoRecordingChunks, { type: mimeType });
+    const extension = mimeType.includes('webm') ? 'webm' : 'mp4';
+    const name = `录像_${new Date().toLocaleTimeString('zh-CN', {hour12: false}).replace(/:/g, '-')}.${extension}`;
+    
+    const reader = new FileReader();
+    reader.onload = function() {
+      videos.push({
+        id: Date.now(),
+        name: name,
+        dataUrl: reader.result,
+        type: 'video'
+      });
+      saveToLocalStorage();
+      renderLibrary();
+      closeVideoRecorder();
+      
+      // 切换到新录制的视频
+      switchToMedia('video', videos.length - 1);
+    };
+    reader.readAsDataURL(videoBlob);
+  };
+  
+  videoRecorder.start(100);
+  
+  // 显示录制指示器
+  recordingIndicator.style.display = 'block';
+  recordingTime.style.display = 'block';
+  startRecordingBtn.style.display = 'none';
+  stopRecordingBtn.style.display = 'block';
+  
+  // 更新录制时间
+  updateRecordingTime();
+}
+
+function stopVideoRecording() {
+  if (videoRecorder && videoRecorder.state !== 'inactive') {
+    videoRecorder.stop();
+  }
+  
+  // 隐藏录制指示器
+  recordingIndicator.style.display = 'none';
+  recordingTime.style.display = 'none';
+  startRecordingBtn.style.display = 'block';
+  stopRecordingBtn.style.display = 'none';
+  
+  if (videoRecordingTimer) {
+    clearInterval(videoRecordingTimer);
+    videoRecordingTimer = null;
+  }
+}
+
+function updateRecordingTime() {
+  videoRecordingTimer = setInterval(() => {
+    const elapsed = Date.now() - videoRecordingStartTime;
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    recordingTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, 1000);
+}
+
+function closeVideoRecorder() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  videoRecorderModal.style.display = 'none';
+  stopVideoRecording();
+}
+
+/* 进度条和时间更新 */
+audio.ontimeupdate = () => {
+  if (currentType === 'music') {
+    const percent = (audio.currentTime / audio.duration) * 100;
+    document.getElementById('bar').style.width = percent + '%';
+    updateTimeDisplay(audio.currentTime, audio.duration);
+  }
+};
+
+video.ontimeupdate = () => {
+  if (currentType === 'video') {
+    const percent = (video.currentTime / video.duration) * 100;
+    document.getElementById('bar').style.width = percent + '%';
+    updateTimeDisplay(video.currentTime, video.duration);
+  }
+};
+
+recorderAudio.ontimeupdate = () => {
+  if (currentType === 'recording') {
+    const percent = (recorderAudio.currentTime / recorderAudio.duration) * 100;
+    document.getElementById('bar').style.width = percent + '%';
+    updateTimeDisplay(recorderAudio.currentTime, recorderAudio.duration);
+  }
+};
+
+/* 音频结束处理 */
+audio.onended = () => {
+  if (playMode === 'loop') {
+    audio.currentTime = 0;
+    audio.play();
+  } else {
+    nextMedia();
+  }
+};
+
+recorderAudio.onended = () => {
+  if (playMode === 'loop') {
+    recorderAudio.currentTime = 0;
+    recorderAudio.play();
+  } else {
+    nextMedia();
+  }
+};
+
+video.onended = () => {
+  if (playMode === 'loop') {
+    video.currentTime = 0;
+    video.play();
+  } else {
+    nextMedia();
+  }
+};
+
+/* 隐藏面板 */
+function togglePanel() {
+  panel.classList.toggle('hidden');
+}
+
+/* 窗口大小变化时调整画布 */
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+});
+
+/* 本地存储功能 */
+function saveToLocalStorage() {
+  const data = {
+    images: images,
+    videos: videos,
+    music: music,
+    recordings: recordings,
+    currentType: currentType,
+    currentIndex: currentIndex
+  };
+  localStorage.setItem('multimediaPlayerData', JSON.stringify(data));
+}
+
+function loadFromLocalStorage() {
+  const savedData = localStorage.getItem('multimediaPlayerData');
+  if (savedData) {
+    try {
+      const data = JSON.parse(savedData);
+      images = data.images || [];
+      videos = data.videos || [];
+      music = data.music || [];
+      recordings = data.recordings || [];
+      currentType = data.currentType || 'image';
+      currentIndex = data.currentIndex || 0;
+      
+      // 如果之前有播放的媒体，恢复它
+      if (images.length > 0 || videos.length > 0 || music.length > 0 || recordings.length > 0) {
+        // 延迟一点时间确保DOM已加载
+        setTimeout(() => {
+          if (eval(currentType + 's').length > 0) {
+            switchToMedia(currentType, currentIndex);
+          }
+        }, 100);
+      }
+    } catch (e) {
+      console.error('加载本地存储数据失败:', e);
+    }
+  }
+}
+
+/* 初始加载 */
+window.onload = () => {
+  // 设置默认黑胶图片
+  vinylImage.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23f0f0f0'/%3E%3Ctext x='50' y='55' text-anchor='middle' font-size='20' fill='%23333'%3E♪%3C/text%3E%3C/svg%3E";
+};
+</script>
+
+</body>
+</html>
